@@ -14,17 +14,26 @@
 ***************************************************************************************/
 
 #include <isa.h>
-
-/* We use the POSIX regex functions to process regular expressions.
- * Type 'man regex' for more information about POSIX regex functions.
- */
 #include <regex.h>
+#include <string.h>
+#include<stdlib.h>
+#include<assert.h>
+
+typedef struct token{
+	int type;
+	char str[32];
+} Token;
 
 enum {
   TK_NOTYPE = 256, TK_EQ,
 
   /* TODO: Add more token types */
-
+  TK_NUM,    //十进制整数
+  TK_MINUS,   //减号
+  TK_MUL,
+  TK_DIV,
+  TK_LP,
+  TK_RP,
 };
 
 static struct rule {
@@ -39,11 +48,32 @@ static struct rule {
   {" +", TK_NOTYPE},    // spaces
   {"\\+", '+'},         // plus
   {"==", TK_EQ},        // equal
+  {"[0-9]+", TK_NUM},   // 十进制整数
+  {"\\-", '-'},         // 减号
+  {"\\*", '*'},         // 乘号
+  {"/", '/'},           // 除号
+  {"\\(", '('},         // 左括号
+  {"\\)", ')'},         // 右括号
 };
 
+// 添加 ARRLEN 宏定义
+#define ARRLEN(arr) (int)(sizeof(arr) / sizeof(arr[0]))
 #define NR_REGEX ARRLEN(rules)
+#define NR_TOKEN 1024
+
 
 static regex_t re[NR_REGEX] = {};
+static Token tokens[NR_TOKEN] __attribute__((used)) = {};
+static int nr_token __attribute__((used))  = 0;
+static int token_index = 0;
+
+// 添加函数声明
+static word_t expression(bool *success);
+static word_t term(bool *success);
+static word_t factor(bool *success);
+static bool check_token(int type);
+static void consume_token(int type);
+
 
 /* Rules are used for many times.
  * Therefore we compile them only once before any usage.
@@ -62,13 +92,7 @@ void init_regex() {
   }
 }
 
-typedef struct token {
-  int type;
-  char str[32];
-} Token;
 
-static Token tokens[32] __attribute__((used)) = {};
-static int nr_token __attribute__((used))  = 0;
 
 static bool make_token(char *e) {
   int position = 0;
@@ -95,7 +119,29 @@ static bool make_token(char *e) {
          */
 
         switch (rules[i].token_type) {
-          default: TODO();
+          case TK_NUM:
+            // 对于数字token，需要记录字符串值
+            tokens[nr_token].type = rules[i].token_type;
+            strncpy(tokens[nr_token].str, substr_start, substr_len);
+            tokens[nr_token].str[substr_len] = '\0';  // 确保字符串结束
+            nr_token++;
+            break;
+    
+          case TK_NOTYPE:
+            // 空格直接跳过，不记录到tokens数组
+            break;
+    
+          case '+': case '-': case '*': case '/': 
+          case '(': case ')': case TK_EQ:
+            // 对于运算符，只需记录类型
+            tokens[nr_token].type = rules[i].token_type;
+            nr_token++;
+            break;
+    
+          default:
+            // 其他未处理的token类型
+            printf("Unhandled token type: %d\n", rules[i].token_type);
+            return false;
         }
 
         break;
@@ -111,6 +157,79 @@ static bool make_token(char *e) {
   return true;
 }
 
+// 检查当前 token 类型
+static bool check_token(int type) {
+  return token_index < nr_token && tokens[token_index].type == type;
+}
+
+// 消耗当前 token
+static void consume_token(int type) {
+  assert(check_token(type));
+  token_index++;
+}
+
+// 因子：数字或括号表达式
+static word_t factor(bool *success) {
+  if (check_token('(')) {
+    consume_token('(');
+    word_t result = expression(success);
+    if (!check_token(')')) {
+      *success = false;
+      return 0;
+    }
+    consume_token(')');
+    return result;
+  } else if (check_token(TK_NUM)) {
+    word_t value = atoi(tokens[token_index].str);
+    consume_token(TK_NUM);
+    return value;
+  } else {
+    *success = false;
+    return 0;
+  }
+}
+
+// 项：处理 * 和 /
+static word_t term(bool *success) {
+  word_t result = factor(success);
+  if (!*success) return 0;
+
+  while (check_token('*') || check_token('/')) {
+    if (check_token('*')) {
+      consume_token('*');
+      result *= factor(success);
+    } else if (check_token('/')) {
+      consume_token('/');
+      word_t divisor = factor(success);
+      if (divisor == 0) {
+        *success = false;
+        return 0;
+      }
+      result /= divisor;
+    }
+    if (!*success) return 0;
+  }
+  return result;
+}
+
+// 表达式：处理 + 和 -
+static word_t expression(bool *success) {
+  word_t result = term(success);
+  if (!*success) return 0;
+
+  while (check_token('+') || check_token('-')) {
+    if (check_token('+')) {
+      consume_token('+');
+      result += term(success);
+    } else if (check_token('-')) {
+      consume_token('-');
+      result -= term(success);
+    }
+    if (!*success) return 0;
+  }
+  return result;
+}
+
 
 word_t expr(char *e, bool *success) {
   if (!make_token(e)) {
@@ -119,7 +238,14 @@ word_t expr(char *e, bool *success) {
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  TODO();
-
-  return 0;
+  token_index = 0;
+  word_t result = expression(success);
+  
+  // 检查是否消耗了所有 token
+  if (*success && token_index != nr_token) {
+    *success = false;
+    return 0;
+  }
+  
+  return result;
 }
