@@ -293,6 +293,15 @@ static word_t equality(bool *success) {
     }
     if (!*success) return 0;
   }
+
+  
+
+
+  //调试代码
+  printf("  equality: returning %d\n", result);
+
+
+
   return result;
 }
 
@@ -307,6 +316,13 @@ static word_t logic_and(bool *success) {
     result = (result && right);  // C语言的短路求值
     if (!*success) return 0;
   }
+
+
+
+  //调试代码
+  printf("  logic_and: returning %d\n", result);
+
+
   return result;
 }
 
