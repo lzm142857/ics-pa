@@ -18,9 +18,17 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "watchpoint.h"
 
+// 添加监视点函数声明
+WP* new_wp();
+void free_wp(WP *wp);
+
+extern WP *head;
 
 word_t expr(char *e, bool *success);
+
+
 
 
 static int is_batch_mode = false;
@@ -86,6 +94,102 @@ static int cmd_p(char *args) {
   return 0;
 }
 
+// 设置监视点
+static int cmd_w(char *args) {
+  if (args == NULL) {
+    printf("Usage: w EXPRESSION\n");
+    return 0;
+  }
+  
+  WP *wp = new_wp();
+  if (wp == NULL) {
+    printf("Failed to create watchpoint.\n");
+    return 0;
+  }
+  
+  // 去掉表达式两端的引号
+  char *expr_str = args;
+  if (expr_str[0] == '"') {
+    expr_str++;
+    size_t len = strlen(expr_str);
+    if (len > 0 && expr_str[len-1] == '"') {
+      expr_str[len-1] = '\0';
+    }
+  }
+  
+  strncpy(wp->expr, expr_str, sizeof(wp->expr) - 1);
+  wp->expr[sizeof(wp->expr) - 1] = '\0';
+  
+  // 计算初始值
+  bool success;
+  wp->last_value = expr(wp->expr, &success);
+  
+  if (success) {
+    printf("Watchpoint %d: %s\n", wp->NO, wp->expr);
+  } else {
+    printf("Invalid expression: %s\n", wp->expr);
+    free_wp(wp);
+  }
+  
+  return 0;
+}
+
+// 列出监视点
+static int cmd_info_w(char *args) {
+  WP *wp = head;
+  if (wp == NULL) {
+    printf("No watchpoints.\n");
+    return 0;
+  }
+  
+  printf("Num     Type           Disp Enb Address    What\n");
+  while (wp != NULL) {
+    if (wp->enabled) {
+      printf("%-8dwatchpoint     keep y   <unknown>   %s = %d\n", 
+             wp->NO, wp->expr, wp->last_value);
+    }
+    wp = wp->next;
+  }
+  return 0;
+}
+
+// 删除监视点
+static int cmd_d(char *args) {
+  if (args == NULL) {
+    printf("Usage: d NUM\n");
+    return 0;
+  }
+  
+  int no = atoi(args);
+  WP *wp = head;
+  while (wp != NULL) {
+    if (wp->NO == no) {
+      free_wp(wp);
+      printf("Deleted watchpoint %d\n", no);
+      return 0;
+    }
+    wp = wp->next;
+  }
+  
+  printf("No watchpoint number %d.\n", no);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  if (args == NULL) {
+    printf("Usage: info r - registers, info w - watchpoints\n");
+    return 0;
+  }
+  
+  if (strcmp(args, "w") == 0) {
+    return cmd_info_w(args);  // 调用监视点列表函数
+  }
+  
+  printf("Unknown info command: %s\n", args);
+  return 0;
+}
+
+
 
 
 static int cmd_help(char *args);
@@ -101,6 +205,9 @@ static struct {
 
   /* TODO: Add more commands */
   { "p", "Evaluate expression", cmd_p },
+  { "w", "Set watchpoint", cmd_w },
+  { "info", "Print program info", cmd_info },
+  { "d", "Delete watchpoint", cmd_d },
 
 };
 
