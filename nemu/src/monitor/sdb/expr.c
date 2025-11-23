@@ -214,17 +214,15 @@ static void consume_token(int type) {
 
 // 因子：数字或括号表达式
 static word_t factor(bool *success) {
-
-  //调试代码
-   printf("  factor[%d]: token_type=%d\n", token_index, 
+  printf("        factor[%d] - ENTER, token_type=%d\n", token_index, 
          token_index < nr_token ? tokens[token_index].type : -1);
-
-
-
+  
   if (check_token('(')) {
+    printf("        factor: found (\n");
     consume_token('(');
     word_t result = expression(success);
     if (!check_token(')')) {
+      printf("        factor: missing )\n");
       *success = false;
       return 0;
     }
@@ -232,28 +230,20 @@ static word_t factor(bool *success) {
     return result;
   } else if (check_token(TK_NUM)) {
     word_t value = atoi(tokens[token_index].str);
+    printf("        factor: number %d from '%s'\n", value, tokens[token_index].str);
     consume_token(TK_NUM);
+    printf("        factor: consumed number, token_index now=%d\n", token_index);
+    *success = true;  // 确保这里设置为 true！
     return value;
-  } else if (check_token(TK_HEX)) {
-    word_t value = strtol(tokens[token_index].str, NULL, 16);
-    consume_token(TK_HEX);
-    return value;
-  } else if (check_token(TK_REG)) {
-    // 调用 ISA 相关的寄存器获取函数
-    word_t value = isa_reg_str2val(tokens[token_index].str + 1, success);
-    consume_token(TK_REG);
-    return value;
-  } else if (check_token(TK_DEREF)) {
-    consume_token(TK_DEREF);
-    word_t addr = factor(success);  // 递归获取地址
-    if (!*success) return 0;
-    // 从内存读取值（需要包含 memory/paddr.h）
-    return paddr_read(addr, 4);
   } else {
+    printf("        factor: no match, token_type=%d\n", 
+           token_index < nr_token ? tokens[token_index].type : -1);
     *success = false;
     return 0;
   }
 }
+
+
 
 // 项：处理 * 和 /
 static word_t term(bool *success) {
