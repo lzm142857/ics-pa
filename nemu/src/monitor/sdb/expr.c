@@ -336,26 +336,33 @@ static word_t logic_and(bool *success) {
 
 // 表达式：处理 + 和 -
 static word_t expression(bool *success) {
-
-  //调试代码
-  printf("expression[%d]\n", token_index);
-
-
-
-
-  word_t result = logic_and(success);  // 改为调用 logic_and
-  if (!*success) return 0;
+  printf("expression[%d] - ENTER\n", token_index);
+  
+  // 这里应该调用 logic_and
+  printf("expression: calling logic_and\n");
+  word_t result = logic_and(success);
+  printf("expression: after logic_and, result=%d, success=%d\n", result, *success);
+  
+  if (!*success) {
+    printf("expression: logic_and failed\n");
+    return 0;
+  }
 
   while (check_token('+') || check_token('-')) {
+    printf("expression: found + or - at token_index=%d\n", token_index);
     if (check_token('+')) {
       consume_token('+');
-      result += logic_and(success);  // 改为调用 logic_and
+      printf("expression: consumed +, calling logic_and\n");
+      result += logic_and(success);
     } else if (check_token('-')) {
       consume_token('-');
-      result -= logic_and(success);  // 改为调用 logic_and
+      printf("expression: consumed -, calling logic_and\n");
+      result -= logic_and(success);
     }
     if (!*success) return 0;
   }
+  
+  printf("expression[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
