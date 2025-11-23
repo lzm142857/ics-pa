@@ -19,6 +19,10 @@
 #include <readline/history.h>
 #include "sdb.h"
 
+
+word_t expr(char *e, bool *success);
+
+
 static int is_batch_mode = false;
 
 void init_regex();
@@ -58,17 +62,30 @@ static int cmd_p(char *args) {
     return 0;
   }
 
+  // 简单方法：如果第一个字符是引号，跳过它
+  char *expr_str = args;
+  if (expr_str[0] == '"') {
+    expr_str++;  // 跳过开头的引号
+  }
+  
+  // 如果最后一个字符是引号，去掉它
+  size_t len = strlen(expr_str);
+  if (len > 0 && expr_str[len-1] == '"') {
+    expr_str[len-1] = '\0';
+  }
+
   bool success;
-  word_t result = expr(args, &success);
+  word_t result = expr(expr_str, &success);
 
   if (success) {
-    printf("%s = %d\n", args, result);
+    printf("%s = %d\n", expr_str, result);
   } else {
-    printf("Expression evaluation failed: %s\n", args);
+    printf("Expression evaluation failed: %s\n", expr_str);
   }
 
   return 0;
 }
+
 
 
 static int cmd_help(char *args);

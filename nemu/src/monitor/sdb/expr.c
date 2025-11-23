@@ -114,9 +114,6 @@ void init_regex() {
 
 
 static bool make_token(char *e) {
-  //调试代码
-  printf("=== Debug: make_token called with: '%s' ===\n", e);
-  printf("Number of regex rules: %d\n", NR_REGEX);
 
 	
   int position = 0;
@@ -128,8 +125,6 @@ static bool make_token(char *e) {
   while (e[position] != '\0') {
     /* Try all rules one by one. */
 
-    //调试代码
-     printf("Current position: %d, remaining: '%s'\n", position, e + position);
 
 
 
@@ -137,22 +132,10 @@ static bool make_token(char *e) {
     for (i = 0; i < NR_REGEX; i ++) {
 
 
-      //调试代码
-      int ret = regexec(&re[i], e + position, 1, &pmatch, 0);
-      printf("  Trying rule[%d]='%s' (token_type=%d): ret=%d, rm_so=%d, rm_eo=%d\n",
-             i, rules[i].regex, rules[i].token_type, ret, pmatch.rm_so, pmatch.rm_eo);
-
-
-
 
       if (regexec(&re[i], e + position, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
-
-
-	//调试代码
-	 printf("  *** MATCHED: rule[%d]='%s' -> token %d: '%.*s'\n", 
-               i, rules[i].regex, rules[i].token_type, substr_len, substr_start);
 
 
 
@@ -198,9 +181,6 @@ static bool make_token(char *e) {
     }
 
     if (i == NR_REGEX) {
-      //调试代码
-       printf("*** NO MATCH at position %d, char='%c' (0x%02x)\n",
-             position, e[position], e[position]);
 
 
 
@@ -209,8 +189,6 @@ static bool make_token(char *e) {
     }
   }
 
-  //调试代码
-  printf("=== make_token finished, nr_token=%d ===\n", nr_token);
 
   return true;
 }
