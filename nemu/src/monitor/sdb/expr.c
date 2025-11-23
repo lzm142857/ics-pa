@@ -44,6 +44,14 @@ enum {
   TK_DEREF,    // 指针解引用
 };
 
+static word_t expression(bool *success);
+static word_t logic_and(bool *success);
+static word_t equality(bool *success);
+static word_t term(bool *success);
+static word_t factor(bool *success);
+static bool check_token(int type);
+static void consume_token(int type);
+
 static struct rule{
   const char *regex;
   int token_type;
