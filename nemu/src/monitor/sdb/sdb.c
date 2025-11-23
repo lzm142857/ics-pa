@@ -52,6 +52,25 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_p(char *args) {
+  if (args == NULL) {
+    printf("Usage: p EXPRESSION\n");
+    return 0;
+  }
+
+  bool success;
+  word_t result = expr(args, &success);
+
+  if (success) {
+    printf("%s = %d\n", args, result);
+  } else {
+    printf("Expression evaluation failed: %s\n", args);
+  }
+
+  return 0;
+}
+
+
 static int cmd_help(char *args);
 
 static struct {
@@ -64,6 +83,7 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
+  { "p", "Evaluate expression", cmd_p },
 
 };
 
