@@ -257,21 +257,26 @@ static word_t factor(bool *success) {
 
 // 项：处理 * 和 /
 static word_t term(bool *success) {
+  printf("      term[%d] - ENTER\n", token_index);
 
-  //调试代码
-  printf("  term[%d]\n", token_index);
-
-
-
+  printf("      term: calling factor\n");
   word_t result = factor(success);
-  if (!*success) return 0;
+  printf("      term: after factor, result=%d, success=%d\n", result, *success);
+
+  if (!*success) {
+    printf("      term: factor failed\n");
+    return 0;
+  }
 
   while (check_token('*') || check_token('/')) {
+    printf("      term: found * or /\n");
     if (check_token('*')) {
       consume_token('*');
+      printf("      term: consumed *, calling factor\n");
       result *= factor(success);
     } else if (check_token('/')) {
       consume_token('/');
+      printf("      term: consumed /, calling factor\n");
       word_t divisor = factor(success);
       if (divisor == 0) {
         *success = false;
@@ -279,10 +284,14 @@ static word_t term(bool *success) {
       }
       result /= divisor;
     }
+    printf("      term: after operation, result=%d, success=%d\n", result, *success);
     if (!*success) return 0;
   }
+  
+  printf("      term[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
+
 
 // 相等性判断：处理 == 和 !=
 static word_t equality(bool *success) {
