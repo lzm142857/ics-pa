@@ -18,6 +18,8 @@
 #include <string.h>
 #include<stdlib.h>
 #include<assert.h>
+#include "memory/paddr.h"  // 用于 paddr_read
+
 
 typedef struct token{
 	int type;
@@ -34,6 +36,12 @@ enum {
   TK_DIV,
   TK_LP,
   TK_RP,
+  //新增类型
+  TK_HEX,      // 十六进制数
+  TK_REG,      // 寄存器名
+  TK_NEQ,      // !=
+  TK_AND,      // &&
+  TK_DEREF,    // 指针解引用
 };
 
 static struct rule {
@@ -54,6 +62,10 @@ static struct rule {
   {"/", '/'},           // 除号
   {"\\(", '('},         // 左括号
   {"\\)", ')'},         // 右括号
+  {"0x[0-9a-fA-F]+", TK_HEX},    // 十六进制
+  {"\\$[a-zA-Z0-9]+", TK_REG},   // 寄存器
+  {"!=", TK_NEQ},                // 不等于
+  {"&&", TK_AND},                // 逻辑与
 };
 
 // 添加 ARRLEN 宏定义
@@ -183,6 +195,21 @@ static word_t factor(bool *success) {
     word_t value = atoi(tokens[token_index].str);
     consume_token(TK_NUM);
     return value;
+  } else if (check_token(TK_HEX)) {
+    word_t value = strtol(tokens[token_index].str, NULL, 16);
+    consume_token(TK_HEX);
+    return value;
+  } else if (check_token(TK_REG)) {
+    // 调用 ISA 相关的寄存器获取函数
+    word_t value = isa_reg_str2val(tokens[token_index].str + 1, success);
+    consume_token(TK_REG);
+    return value;
+  } else if (check_token(TK_DEREF)) {
+    consume_token(TK_DEREF);
+    word_t addr = factor(success);  // 递归获取地址
+    if (!*success) return 0;
+    // 从内存读取值（需要包含 memory/paddr.h）
+    return paddr_read(addr, 4);
   } else {
     *success = false;
     return 0;
@@ -212,18 +239,52 @@ static word_t term(bool *success) {
   return result;
 }
 
+// 相等性判断：处理 == 和 !=
+static word_t equality(bool *success) {
+  word_t result = term(success);
+  if (!*success) return 0;
+  
+  while (check_token(TK_EQ) || check_token(TK_NEQ)) {
+    if (check_token(TK_EQ)) {
+      consume_token(TK_EQ);
+      word_t right = term(success);
+      result = (result == right);
+    } else if (check_token(TK_NEQ)) {
+      consume_token(TK_NEQ);
+      word_t right = term(success);
+      result = (result != right);
+    }
+    if (!*success) return 0;
+  }
+  return result;
+}
+
+// 逻辑与：处理 &&
+static word_t logic_and(bool *success) {
+  word_t result = equality(success);
+  if (!*success) return 0;
+  
+  while (check_token(TK_AND)) {
+    consume_token(TK_AND);
+    word_t right = equality(success);
+    result = (result && right);  // C语言的短路求值
+    if (!*success) return 0;
+  }
+  return result;
+}
+
 // 表达式：处理 + 和 -
 static word_t expression(bool *success) {
-  word_t result = term(success);
+  word_t result = logic_and(success);  // 改为调用 logic_and
   if (!*success) return 0;
 
   while (check_token('+') || check_token('-')) {
     if (check_token('+')) {
       consume_token('+');
-      result += term(success);
+      result += logic_and(success);  // 改为调用 logic_and
     } else if (check_token('-')) {
       consume_token('-');
-      result -= term(success);
+      result -= logic_and(success);  // 改为调用 logic_and
     }
     if (!*success) return 0;
   }
@@ -237,15 +298,29 @@ word_t expr(char *e, bool *success) {
     return 0;
   }
 
+  // 识别指针解引用：将乘法 * 转换为解引用 DEREF
+  for (int i = 0; i < nr_token; i++) {
+    if (tokens[i].type == '*') {
+      // 如果 * 在开头，或者前面是运算符、括号、比较运算符，就是解引用
+      if (i == 0 || 
+          tokens[i-1].type == '+' || tokens[i-1].type == '-' ||
+          tokens[i-1].type == '*' || tokens[i-1].type == '/' ||
+          tokens[i-1].type == '(' || tokens[i-1].type == TK_EQ ||
+          tokens[i-1].type == TK_NEQ || tokens[i-1].type == TK_AND) {
+        tokens[i].type = TK_DEREF;
+      }
+    }
+  }
+
   /* TODO: Insert codes to evaluate the expression. */
   token_index = 0;
   word_t result = expression(success);
-  
+
   // 检查是否消耗了所有 token
   if (*success && token_index != nr_token) {
     *success = false;
     return 0;
   }
-  
+
   return result;
 }
