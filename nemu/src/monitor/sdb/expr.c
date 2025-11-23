@@ -180,7 +180,6 @@ static bool make_token(char *e) {
     
           default:
             // 其他未处理的token类型
-            printf("Unhandled token type: %d\n", rules[i].token_type);
             return false;
         }
 
@@ -189,10 +188,6 @@ static bool make_token(char *e) {
     }
 
     if (i == NR_REGEX) {
-
-
-
-      printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
       return false;
     }
   }
@@ -214,15 +209,11 @@ static void consume_token(int type) {
 
 // 因子：数字或括号表达式
 static word_t factor(bool *success) {
-  printf("        factor[%d] - ENTER, token_type=%d\n", token_index, 
-         token_index < nr_token ? tokens[token_index].type : -1);
   
   if (check_token('(')) {
-    printf("        factor: found (\n");
     consume_token('(');
     word_t result = expression(success);
     if (!check_token(')')) {
-      printf("        factor: missing )\n");
       *success = false;
       return 0;
     }
@@ -230,14 +221,10 @@ static word_t factor(bool *success) {
     return result;
   } else if (check_token(TK_NUM)) {
     word_t value = atoi(tokens[token_index].str);
-    printf("        factor: number %d from '%s'\n", value, tokens[token_index].str);
     consume_token(TK_NUM);
-    printf("        factor: consumed number, token_index now=%d\n", token_index);
     *success = true;  // 确保这里设置为 true！
     return value;
   } else {
-    printf("        factor: no match, token_type=%d\n", 
-           token_index < nr_token ? tokens[token_index].type : -1);
     *success = false;
     return 0;
   }
@@ -247,26 +234,18 @@ static word_t factor(bool *success) {
 
 // 项：处理 * 和 /
 static word_t term(bool *success) {
-  printf("      term[%d] - ENTER\n", token_index);
-
-  printf("      term: calling factor\n");
   word_t result = factor(success);
-  printf("      term: after factor, result=%d, success=%d\n", result, *success);
 
   if (!*success) {
-    printf("      term: factor failed\n");
     return 0;
   }
 
   while (check_token('*') || check_token('/')) {
-    printf("      term: found * or /\n");
     if (check_token('*')) {
       consume_token('*');
-      printf("      term: consumed *, calling factor\n");
       result *= factor(success);
     } else if (check_token('/')) {
       consume_token('/');
-      printf("      term: consumed /, calling factor\n");
       word_t divisor = factor(success);
       if (divisor == 0) {
         *success = false;
@@ -274,30 +253,22 @@ static word_t term(bool *success) {
       }
       result /= divisor;
     }
-    printf("      term: after operation, result=%d, success=%d\n", result, *success);
     if (!*success) return 0;
   }
   
-  printf("      term[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
 
 // 相等性判断：处理 == 和 !=
 static word_t equality(bool *success) {
-  printf("    equality[%d] - ENTER\n", token_index);
-  
-  printf("    equality: calling term\n");
   word_t result = term(success);
-  printf("    equality: after term, result=%d, success=%d\n", result, *success);
   
   if (!*success) {
-    printf("    equality: term failed\n");
     return 0;
   }
 
   while (check_token(TK_EQ) || check_token(TK_NEQ)) {
-    printf("    equality: found == or !=\n");
     if (check_token(TK_EQ)) {
       consume_token(TK_EQ);
       word_t right = term(success);
@@ -310,7 +281,6 @@ static word_t equality(bool *success) {
     if (!*success) return 0;
   }
   
-  printf("    equality[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
@@ -318,58 +288,43 @@ static word_t equality(bool *success) {
 
 // 逻辑与：处理 &&
 static word_t logic_and(bool *success) {
-  printf("  logic_and[%d] - ENTER\n", token_index);
-  
-  printf("  logic_and: calling equality\n");
   word_t result = equality(success);
-  printf("  logic_and: after equality, result=%d, success=%d\n", result, *success);
   
   if (!*success) {
-    printf("  logic_and: equality failed\n");
     return 0;
   }
 
   while (check_token(TK_AND)) {
-    printf("  logic_and: found &&\n");
     consume_token(TK_AND);
     word_t right = equality(success);
     result = (result && right);
     if (!*success) return 0;
   }
   
-  printf("  logic_and[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
 // 表达式：处理 + 和 -
 static word_t expression(bool *success) {
-  printf("expression[%d] - ENTER\n", token_index);
   
   // 这里应该调用 logic_and
-  printf("expression: calling logic_and\n");
   word_t result = logic_and(success);
-  printf("expression: after logic_and, result=%d, success=%d\n", result, *success);
   
   if (!*success) {
-    printf("expression: logic_and failed\n");
     return 0;
   }
 
   while (check_token('+') || check_token('-')) {
-    printf("expression: found + or - at token_index=%d\n", token_index);
     if (check_token('+')) {
       consume_token('+');
-      printf("expression: consumed +, calling logic_and\n");
       result += logic_and(success);
     } else if (check_token('-')) {
       consume_token('-');
-      printf("expression: consumed -, calling logic_and\n");
       result -= logic_and(success);
     }
     if (!*success) return 0;
   }
   
-  printf("expression[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
@@ -395,31 +350,9 @@ word_t expr(char *e, bool *success) {
   }
 
 
-
-//调试代码
-// === 在这里添加调试代码 ===
-  printf("=== Debug: Starting evaluation, nr_token=%d ===\n", nr_token);
-  for (int i = 0; i < nr_token; i++) {
-    printf("token[%d]: type=%d", i, tokens[i].type);
-    if (tokens[i].type == TK_NUM) {
-      printf(", str='%s'", tokens[i].str);
-    }
-    printf("\n");
-  }
-
-
-
   /* TODO: Insert codes to evaluate the expression. */
   token_index = 0;
   word_t result = expression(success);
-
-
-//调试代码
-// === 在这里添加调试代码 ===
-  printf("=== Debug: Evaluation finished, success=%d, result=%d, token_index=%d ===\n", 
-         *success, result, token_index);
-
-
 
 
   // 检查是否消耗了所有 token
