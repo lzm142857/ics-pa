@@ -206,6 +206,13 @@ static void consume_token(int type) {
 
 // 因子：数字或括号表达式
 static word_t factor(bool *success) {
+
+  //调试代码
+   printf("  factor[%d]: token_type=%d\n", token_index, 
+         token_index < nr_token ? tokens[token_index].type : -1);
+
+
+
   if (check_token('(')) {
     consume_token('(');
     word_t result = expression(success);
@@ -242,6 +249,12 @@ static word_t factor(bool *success) {
 
 // 项：处理 * 和 /
 static word_t term(bool *success) {
+
+  //调试代码
+  printf("  term[%d]\n", token_index);
+
+
+
   word_t result = factor(success);
   if (!*success) return 0;
 
@@ -299,6 +312,13 @@ static word_t logic_and(bool *success) {
 
 // 表达式：处理 + 和 -
 static word_t expression(bool *success) {
+
+  //调试代码
+  printf("expression[%d]\n", token_index);
+
+
+
+
   word_t result = logic_and(success);  // 改为调用 logic_and
   if (!*success) return 0;
 
@@ -336,9 +356,33 @@ word_t expr(char *e, bool *success) {
     }
   }
 
+
+
+//调试代码
+// === 在这里添加调试代码 ===
+  printf("=== Debug: Starting evaluation, nr_token=%d ===\n", nr_token);
+  for (int i = 0; i < nr_token; i++) {
+    printf("token[%d]: type=%d", i, tokens[i].type);
+    if (tokens[i].type == TK_NUM) {
+      printf(", str='%s'", tokens[i].str);
+    }
+    printf("\n");
+  }
+
+
+
   /* TODO: Insert codes to evaluate the expression. */
   token_index = 0;
   word_t result = expression(success);
+
+
+//调试代码
+// === 在这里添加调试代码 ===
+  printf("=== Debug: Evaluation finished, success=%d, result=%d, token_index=%d ===\n", 
+         *success, result, token_index);
+
+
+
 
   // 检查是否消耗了所有 token
   if (*success && token_index != nr_token) {
