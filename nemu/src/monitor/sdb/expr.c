@@ -286,10 +286,19 @@ static word_t term(bool *success) {
 
 // 相等性判断：处理 == 和 !=
 static word_t equality(bool *success) {
-  word_t result = term(success);
-  if (!*success) return 0;
+  printf("    equality[%d] - ENTER\n", token_index);
   
+  printf("    equality: calling term\n");
+  word_t result = term(success);
+  printf("    equality: after term, result=%d, success=%d\n", result, *success);
+  
+  if (!*success) {
+    printf("    equality: term failed\n");
+    return 0;
+  }
+
   while (check_token(TK_EQ) || check_token(TK_NEQ)) {
+    printf("    equality: found == or !=\n");
     if (check_token(TK_EQ)) {
       consume_token(TK_EQ);
       word_t right = term(success);
@@ -301,36 +310,35 @@ static word_t equality(bool *success) {
     }
     if (!*success) return 0;
   }
-
   
-
-
-  //调试代码
-  printf("  equality: returning %d\n", result);
-
-
-
+  printf("    equality[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
+
+
 // 逻辑与：处理 &&
 static word_t logic_and(bool *success) {
-  word_t result = equality(success);
-  if (!*success) return 0;
+  printf("  logic_and[%d] - ENTER\n", token_index);
   
-  while (check_token(TK_AND)) {
-    consume_token(TK_AND);
-    word_t right = equality(success);
-    result = (result && right);  // C语言的短路求值
-    if (!*success) return 0;
+  printf("  logic_and: calling equality\n");
+  word_t result = equality(success);
+  printf("  logic_and: after equality, result=%d, success=%d\n", result, *success);
+  
+  if (!*success) {
+    printf("  logic_and: equality failed\n");
+    return 0;
   }
 
-
-
-  //调试代码
-  printf("  logic_and: returning %d\n", result);
-
-
+  while (check_token(TK_AND)) {
+    printf("  logic_and: found &&\n");
+    consume_token(TK_AND);
+    word_t right = equality(success);
+    result = (result && right);
+    if (!*success) return 0;
+  }
+  
+  printf("  logic_and[%d] - EXIT, result=%d\n", token_index, result);
   return result;
 }
 
