@@ -203,7 +203,6 @@ static void consume_token(int type) {
 
 // 因子：数字或括号表达式
 static word_t factor(bool *success) {
-  
   if (check_token('(')) {
     consume_token('(');
     word_t result = expression(success);
@@ -216,15 +215,29 @@ static word_t factor(bool *success) {
   } else if (check_token(TK_NUM)) {
     word_t value = atoi(tokens[token_index].str);
     consume_token(TK_NUM);
-    *success = true;  // 确保这里设置为 true！
+    *success = true;
     return value;
+  } else if (check_token(TK_HEX)) {
+    word_t value = strtol(tokens[token_index].str, NULL, 16);
+    consume_token(TK_HEX);
+    *success = true;
+    return value;
+  } else if (check_token(TK_REG)) {
+    // 寄存器访问
+    word_t value = isa_reg_str2val(tokens[token_index].str + 1, success);
+    consume_token(TK_REG);
+    return value;
+  } else if (check_token(TK_DEREF)) {
+    // 指针解引用
+    consume_token(TK_DEREF);
+    word_t addr = factor(success);
+    if (!*success) return 0;
+    return paddr_read(addr, 4);
   } else {
     *success = false;
     return 0;
   }
 }
-
-
 
 // 项：处理 * 和 /
 static word_t term(bool *success) {
