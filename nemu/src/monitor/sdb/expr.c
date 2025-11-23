@@ -44,7 +44,7 @@ enum {
   TK_DEREF,    // 指针解引用
 };
 
-static struct rule {
+static struct rule{
   const char *regex;
   int token_type;
 } rules[] = {
@@ -52,20 +52,27 @@ static struct rule {
   /* TODO: Add more rules.
    * Pay attention to the precedence level of different rules.
    */
-
-  {" +", TK_NOTYPE},    // spaces
-  {"\\+", '+'},         // plus
-  {"==", TK_EQ},        // equal
-  {"[0-9]+", TK_NUM},   // 十进制整数
-  {"\\-", '-'},         // 减号
-  {"\\*", '*'},         // 乘号
-  {"/", '/'},           // 除号
-  {"\\(", '('},         // 左括号
-  {"\\)", ')'},         // 右括号
-  {"0x[0-9a-fA-F]+", TK_HEX},    // 十六进制
-  {"\\$[a-zA-Z0-9]+", TK_REG},   // 寄存器
+   // 1. 先匹配多字符运算符（最长的模式）
   {"!=", TK_NEQ},                // 不等于
-  {"&&", TK_AND},                // 逻辑与
+  {"&&", TK_AND},                // 逻辑与  
+  {"==", TK_EQ},                 // 等于
+  
+  // 2. 然后匹配空格（避免干扰其他匹配）
+  {" +", TK_NOTYPE},             // 空格
+  
+  // 3. 匹配数字和标识符
+  {"0x[0-9a-fA-F]+", TK_HEX},    // 十六进制
+  {"[0-9]+", TK_NUM},            // 十进制整数 ← 这个很重要，要提前！
+  {"\\$[a-zA-Z0-9]+", TK_REG},   // 寄存器
+  
+  // 4. 最后匹配单字符运算符
+  {"\\+", '+'},                  // 加号
+  {"\\-", '-'},                  // 减号
+  {"\\*", '*'},                  // 乘号
+  {"/", '/'},                    // 除号
+  {"\\(", '('},                  // 左括号
+  {"\\)", ')'},                  // 右括号
+  
 };
 
 // 添加 ARRLEN 宏定义
