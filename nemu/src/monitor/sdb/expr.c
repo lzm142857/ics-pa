@@ -337,10 +337,28 @@ static word_t expression(bool *success) {
 
 
 word_t expr(char *e, bool *success) {
+
+  printf("DEBUG: expr called with: %s\n", e);
+
+
+  token_index = 0;
+  nr_token = 0;
+
   if (!make_token(e)) {
+    printf("DEBUG: make_token failed for expression: '%s'\n", e);
+
     *success = false;
     return 0;
   }
+
+
+
+  printf("DEBUG: Number of tokens: %d\n", nr_token);
+  for (int i = 0; i < nr_token; i++) {
+    printf("DEBUG: Token %d: type=%d, str='%s'\n", i, tokens[i].type, tokens[i].str);
+  }
+
+
 
   // 识别指针解引用：将乘法 * 转换为解引用 DEREF
   for (int i = 0; i < nr_token; i++) {
@@ -352,6 +370,8 @@ word_t expr(char *e, bool *success) {
           tokens[i-1].type == '(' || tokens[i-1].type == TK_EQ ||
           tokens[i-1].type == TK_NEQ || tokens[i-1].type == TK_AND) {
         tokens[i].type = TK_DEREF;
+
+	 printf("DEBUG: Converted token %d from * to DEREF\n", i);
       }
     }
   }
@@ -362,11 +382,21 @@ word_t expr(char *e, bool *success) {
   word_t result = expression(success);
 
 
+  printf("DEBUG: expression result: %u, success: %d\n", result, *success);
+  printf("DEBUG: tokens consumed: %d, total tokens: %d\n", token_index, nr_token);
+
+
+
   // 检查是否消耗了所有 token
   if (*success && token_index != nr_token) {
+
+    printf("DEBUG: ERROR - Not all tokens consumed! %d != %d\n", token_index, nr_token);	  
     *success = false;
     return 0;
   }
 
+
+
+  printf("DEBUG: Final result: %u\n", result);
   return result;
 }
