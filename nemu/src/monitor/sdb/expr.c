@@ -154,6 +154,10 @@ static bool make_token(char *e) {
 
         switch (rules[i].token_type) {
           case TK_NUM:
+	  case TK_HEX:     // 添加这个
+          case TK_REG:     // 添加这个
+          case TK_NEQ:     // 添加这个  
+          case TK_AND:
             // 对于数字token，需要记录字符串值
             tokens[nr_token].type = rules[i].token_type;
             strncpy(tokens[nr_token].str, substr_start, substr_len);
@@ -169,6 +173,8 @@ static bool make_token(char *e) {
           case '(': case ')': case TK_EQ:
             // 对于运算符，只需记录类型
             tokens[nr_token].type = rules[i].token_type;
+	    strncpy(tokens[nr_token].str, substr_start, substr_len);
+	    tokens[nr_token].str[substr_len] = '\0';
             nr_token++;
             break;
     
